@@ -29,6 +29,7 @@ RSpec.describe Spree::ReturnItem, type: :model do
       inventory_unit.update_attributes!(state: 'shipped')
       return_item.update_attributes!(reception_status: 'awaiting')
       allow(return_item).to receive(:eligible_for_return?).and_return(true)
+      return_item.skip_customer_return_processing = true
     end
 
     subject { return_item.receive! }

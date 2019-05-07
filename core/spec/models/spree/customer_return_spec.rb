@@ -173,6 +173,10 @@ RSpec.describe Spree::CustomerReturn, type: :model do
     let(:inventory_unit)  { create(:inventory_unit, state: 'shipped', order: create(:shipped_order)) }
     let(:return_item)     { build(:return_item, inventory_unit: inventory_unit) }
 
+    before do
+      return_item.skip_customer_return_processing = true
+    end
+
     context "to the initial stock location" do
       it "should mark the received inventory units are returned" do
         create(:customer_return_without_return_items, return_items: [return_item], stock_location_id: inventory_unit.shipment.stock_location_id)
