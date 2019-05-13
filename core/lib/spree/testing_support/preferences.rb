@@ -18,6 +18,16 @@ module Spree
           Rails.application.config.spree = Spree::Config.environment
         end
 
+        ::Spree.config do |config|
+          if ENV['ACTIVE_STORAGE']
+            config.image_attachment_module = 'Spree::Image::ActiveStorageAttachment'
+            config.taxon_attachment_module = 'Spree::Taxon::ActiveStorageAttachment'
+          else
+            config.image_attachment_module = 'Spree::Image::PaperclipAttachment'
+            config.taxon_attachment_module = 'Spree::Taxon::PaperclipAttachment'
+          end
+        end
+
         configure_spree_preferences(&config_block) if block_given?
       end
 

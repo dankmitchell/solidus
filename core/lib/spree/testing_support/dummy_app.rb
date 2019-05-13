@@ -3,23 +3,17 @@
 ENV['RAILS_ENV'] = 'test'
 ENV['DISABLE_DATABASE_ENVIRONMENT_CHECK'] = '1'
 
-require 'rails'
-require 'active_record/railtie'
-require 'action_controller/railtie'
-require 'action_mailer/railtie'
+require 'rails/all'
 
 Rails.env = 'test'
 
 require 'solidus_core'
 
-# @private
-def forgery_protected_by_default?
-  Gem::Version.new(Rails.version) >= Gem::Version.new('5.2')
-end
+RAILS_52_OR_ABOVE = Gem::Version.new(Rails.version) >= Gem::Version.new('5.2')
 
 # @private
 class ApplicationController < ActionController::Base
-  if !forgery_protected_by_default?
+  unless RAILS_52_OR_ABOVE
     protect_from_forgery with: :exception
   end
 end
@@ -65,13 +59,17 @@ module DummyApp
     config.active_support.deprecation                 = :stderr
     config.secret_key_base                            = 'SECRET_TOKEN'
 
-    if forgery_protected_by_default?
+    if RAILS_52_OR_ABOVE
       config.action_controller.default_protect_from_forgery = true
-    end
-
-    if config.active_record.sqlite3
-      # Rails >= 5.2
       config.active_record.sqlite3.represent_boolean_as_integer = true
+
+      initializer 'solidus.active_storage' do
+        require 'active_storage'
+        require 'active_storage/service/disk_service'
+        ::ActiveStorage::Blob.service = ::ActiveStorage::Service::DiskService.new(
+          root: Dir.mktmpdir('activestorage-test')
+        )
+      end
     end
 
     # Avoid issues if an old spec/dummy still exists
@@ -112,6 +110,14 @@ end
 Spree.user_class = 'Spree::LegacyUser'
 Spree.config do |config|
   config.mails_from = "store@example.com"
+
+  if ENV['ACTIVE_STORAGE']
+    config.image_attachment_module = 'Spree::Image::ActiveStorageAttachment'
+    config.taxon_attachment_module = 'Spree::Taxon::ActiveStorageAttachment'
+  else
+    config.image_attachment_module = 'Spree::Image::PaperclipAttachment'
+    config.taxon_attachment_module = 'Spree::Taxon::PaperclipAttachment'
+  end
 end
 
 # Raise on deprecation warnings
